@@ -1,0 +1,10 @@
+{
+  "customerName": "Amina Rahman",
+  "customerEmail": "amina@example.com",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2
+    }
+  ]
+}

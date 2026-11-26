@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  dotnet:
+    name: Restore, build and test API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Restore
+        run: |
+          dotnet restore
+          dotnet restore tests/BdCommerce.Api.Tests/BdCommerce.Api.Tests.csproj
+      - name: Build
+        run: dotnet build --no-restore -c Release
+      - name: Test (Testcontainers PostgreSQL)
+        run: dotnet test tests/BdCommerce.Api.Tests/BdCommerce.Api.Tests.csproj -c Release --no-restore
+
+  docker:
+    name: Build API image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker build
+        run: docker build -t bd-commerce-api:ci .
+
+  web:
+    name: Build Next.js storefront
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect web project
+        id: detect
+        run: |
+          if [ -f web/package.json ] && [ -f web/package-lock.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.detect.outputs.present == 'true'
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: npm ci
+        if: steps.detect.outputs.present == 'true'
+        working-directory: web
+        run: npm ci
+      - name: npm run build
+        if: steps.detect.outputs.present == 'true'
+        working-directory: web
+        run: npm run build
