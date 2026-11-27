@@ -4,11 +4,13 @@ A runnable commerce backend and storefront for developers who want a complete, l
 
 [![CI](https://github.com/ibraramin/bd-commerce-api/actions/workflows/ci.yml/badge.svg)](https://github.com/ibraramin/bd-commerce-api/actions/workflows/ci.yml) ![.NET 8](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql) ![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs) ![MIT](https://img.shields.io/badge/license-MIT-green)
 
-[![Launch video](https://github.com/ibraramin/bd-commerce-api/releases/download/v0.1.0/brag.jpg)](https://github.com/ibraramin/bd-commerce-api/releases/download/v0.1.0/brag.mp4)
-
-[Watch the 20-second launch video](https://github.com/ibraramin/bd-commerce-api/releases/download/v0.1.0/brag.mp4)
+[![BD Commerce API launch video](https://github.com/ibraramin/bd-commerce-api/releases/download/v0.1.0/brag.jpg)](https://github.com/ibraramin/bd-commerce-api/releases/download/v0.1.0/brag.mp4)
 
 ![Project showcase](https://github.com/ibraramin/bd-commerce-api/releases/download/v0.1.0/showcase.gif)
+
+[![Launch video](docs/assets/brag.jpg)](docs/assets/brag.mp4)
+
+https://github.com/ibraramin/bd-commerce-api/raw/main/docs/assets/brag.mp4
 
 
 ## Key capabilities
@@ -22,9 +24,7 @@ A runnable commerce backend and storefront for developers who want a complete, l
 
 ## Demo
 
-![BD Commerce API terminal demo](demo.gif)
-
-A 21-second recording of the real browse, order, payment initiation, and order lookup flow. Every response comes from the local Compose stack.
+The launch video and showcase above walk through the catalog, order, payment initiation, and order lookup flow. Every response comes from the local Compose stack.
 
 ## Quickstart
 
@@ -157,8 +157,6 @@ Canonical scenario in `load/k6.js`: a `ramping-vus` executor (0 to 10 VUs over 1
 | Wall clock / complete iterations | 35.4 s / 1300 |
 
 Thresholds `rate<0.01` on `http_req_failed`, `p(95)<2000` ms on `http_req_duration`, and `rate>0.99` on `checks` were all satisfied. k6 v2.4.0 does not export p99. The machine-readable export is `results/k6-summary.json`, and the full write-up with the exact command is `results/LOAD-RESULTS.md`.
-
-A separate local observation with ApacheBench (`ab -n 1000 -c 20`) against `GET /api/v1/products` recorded 4969.68 req/s with p50 3 ms, p95 4 ms, p99 18 ms, and zero failed requests on the same machine. ApacheBench and k6 use different clients and load models, so these two sets of figures are not comparable and are kept separate.
 
 ## Scope and deployment
 
