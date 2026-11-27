@@ -1,163 +1,177 @@
 # BD Commerce API
 
-A .NET 8 minimal API for a product catalog, order placement, and a sandboxed payment intent flow backed by PostgreSQL and a mock payment provider. A Next.js storefront lives in `web/`.
+A runnable commerce backend and storefront for developers who want a complete, local-first reference stack: a .NET 8 minimal API, PostgreSQL 16 persistence, a deterministic sandbox payment flow, and distributed tracing you can inspect in Jaeger. Clone the repository, start one Compose stack, and drive the full catalog, order, and payment lifecycle through real HTTP routes.
 
-[![CI](https://github.com/ibraramin/bd-commerce-api/actions/workflows/ci.yml/badge.svg)](https://github.com/ibraramin/bd-commerce-api/actions/workflows/ci.yml) ![stack](https://img.shields.io/badge/stack-.NET%208%20%7C%20PostgreSQL%2016%20%7C%20Next.js%2015-blue) ![license](https://img.shields.io/badge/license-MIT-green) ![payment](https://img.shields.io/badge/payment-bKash%2FNagad%20sandbox-yellow)
+[![CI](https://github.com/ibraramin/bd-commerce-api/actions/workflows/ci.yml/badge.svg)](https://github.com/ibraramin/bd-commerce-api/actions/workflows/ci.yml) ![.NET 8](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql) ![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs) ![MIT](https://img.shields.io/badge/license-MIT-green)
+
+[![Launch video](https://github.com/ibraramin/bd-commerce-api/releases/download/v0.1.0/brag.jpg)](https://github.com/ibraramin/bd-commerce-api/releases/download/v0.1.0/brag.mp4)
+
+[Watch the 20-second launch video](https://github.com/ibraramin/bd-commerce-api/releases/download/v0.1.0/brag.mp4)
+
+![Project showcase](https://github.com/ibraramin/bd-commerce-api/releases/download/v0.1.0/showcase.gif)
+
+
+## Key capabilities
+
+- **.NET 8 minimal API** with FluentValidation request checks, `application/problem+json` validation responses, Swagger UI, and a golden-snapshot OpenAPI contract suite.
+- **PostgreSQL 16** through EF Core and Npgsql. The app creates its schema and seeds five BDT-priced products on startup; Compose keeps data in a named volume.
+- **Order flow** that computes line totals server-side from the catalog, returns `201 Created` with a `Location` header, and exposes integer-id order lookup.
+- **Sandbox payment intents** with idempotent initiation, HMAC-SHA256 callbacks verified against the exact raw request bytes, and a pluggable provider abstraction shaped for bKash and Nagad sandbox checkouts. The offline mock and the bKash sandbox adapter make no processor calls and move no money, and credentials are read only from environment variables.
+- **Next.js 15 storefront** in `web/` with a product listing, a checkout form, and an order status page, all calling the same API routes.
+- **OpenTelemetry tracing** with automatic ASP.NET Core request spans plus named `products.list`, `orders.create`, and `payments.initiate` spans, exported over OTLP/gRPC to a local collector and viewed in Jaeger.
 
 ## Demo
 
 ![BD Commerce API terminal demo](demo.gif)
 
-A 21-second recording of the real browse to checkout to order-status flow: product list, `POST /orders`, payment initiation, and final order lookup. The Python/jq output comes from the local Compose stack, not canned data.
+A 21-second recording of the real browse, order, payment initiation, and order lookup flow. Every response comes from the local Compose stack.
 
-## Prerequisites
+## Quickstart
 
-- .NET SDK 8.0.428 at `$HOME/.dotnet`
-- Docker with the Docker daemon running and Docker Compose
+Prerequisites:
+
+- .NET SDK 8.0 (CI uses `8.0.x`)
+- Docker with the daemon running and Docker Compose
 - `curl` and `openssl` for the examples below
+- Node.js 20 and npm for the storefront only
 
-## Setup
-
-1. Put the SDK on `PATH` and restore:
-
-   ```bash
-   export PATH="$HOME/.dotnet:$PATH"
-   dotnet restore
-   ```
-
-2. Run the API, PostgreSQL and the local tracing stack together:
-
-   ```bash
-   docker compose up --build
-   ```
-
-   The API listens on `http://localhost:8080`. Swagger UI is at `http://localhost:8080/swagger` and the OpenAPI document is at `http://localhost:8080/swagger/v1/swagger.json`. Every URL in this README is loopback-only (`localhost` / `127.0.0.1`): there is no live URL and no hosted deployment for this project. The whole stack is sandbox/local only.
-
-   To run the API directly instead, export the variables in the table below and use:
-
-   ```bash
-   dotnet run --project src/BdCommerce.Api
-   ```
-
-3. Run the tests. The integration tests start a real PostgreSQL 16 container through Testcontainers, so the Docker daemon must be available:
-
-   ```bash
-   dotnet test tests/BdCommerce.Api.Tests/BdCommerce.Api.Tests.csproj -c Release
-   ```
-
-   OpenAPI contract checks live in the same project, in `tests/BdCommerce.Api.Tests/OpenApiContractTests.cs` (27 distinct cases). They use the in-process `ApiFixture` to fetch the generated `/swagger/v1/swagger.json` and assert the OpenAPI version and info, the exact path set, operation ids and tags, documented status codes, component schema properties, success-response shapes, the absence of security schemes, and `application/problem+json` validation errors. `GeneratedDocument_MatchesCommittedGoldenSnapshot` canonicalizes and diffs the generated document against the committed golden snapshot `tests/BdCommerce.Api.Tests/Golden/openapi-v1.json`, captured from the running app, so schema drift fails the suite. Both `dotnet test -c Release` (solution level) and `dotnet test tests/BdCommerce.Api.Tests -c Release` pass 36/36 tests (27 contract + 9 existing tests). The former standalone `tests/BdCommerce.Api.ContractTests/` project was removed: four distinct cases were folded into this suite and 17 duplicates dropped.
-
-## Environment variables
-
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `ConnectionStrings__Default` | Yes for local runs | `Host=postgres;Port=5432;Database=bdcommerce;Username=postgres;Password=postgres` in Compose | Npgsql connection string used by EF Core |
-| `Payment__Provider` | No | `Mock` | Payment provider implementation. `Mock` keeps the flow entirely in sandbox |
-| `Payment__WebhookSecret` | Development default in Compose | `local-dev-secret-change-me` in Compose | HMAC-SHA256 secret used to verify `X-Signature` on payment callbacks |
-
-Compose reads these from the shell environment and supplies development defaults when they are unset. There is no hosted deployment in this project. If you adapt this stack for a real deployment, replace the development webhook secret and the default PostgreSQL password first.
-
-## Sample requests
-
-The order body comes from `samples/order.json`. Replace the example product id with one returned by `GET /api/v1/products`, and replace `{id}` and `{paymentIntentId}` with values from earlier responses.
+Start the full stack:
 
 ```bash
+git clone https://github.com/ibraramin/bd-commerce-api.git
+cd bd-commerce-api
+docker compose up --build
+```
+
+The API listens at <http://localhost:8080>. Swagger UI is at <http://localhost:8080/swagger> and the OpenAPI document is at <http://localhost:8080/swagger/v1/swagger.json>.
+
+Start the storefront in a second terminal:
+
+```bash
+cd web
+npm ci
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 npm run dev
+```
+
+The storefront is at <http://localhost:3000>.
+
+Run the test suite. The integration tests start a PostgreSQL 16 container through Testcontainers, so the Docker daemon must be available:
+
+```bash
+dotnet test tests/BdCommerce.Api.Tests/BdCommerce.Api.Tests.csproj -c Release
+```
+
+To run the API without Compose, set the variables from the table below and use `dotnet run --project src/BdCommerce.Api`.
+
+### Configuration
+
+Compose reads these from the shell and supplies development defaults when they are unset.
+
+| Variable | Default in Compose | Purpose |
+| --- | --- | --- |
+| `ConnectionStrings__Default` | `Host=postgres;Port=5432;Database=bdcommerce;Username=postgres;Password=postgres` | Npgsql connection string used by EF Core |
+| `Payment__Provider` | `Mock` | Provider selection. Only the explicit value `BkashSandbox` selects the sandbox adapter; every other value keeps the flow offline |
+| `Payment__WebhookSecret` | `local-dev-secret-change-me` | HMAC-SHA256 secret used to verify `X-Signature` on payment callbacks |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | `bdcommerce`, `postgres`, `postgres` | PostgreSQL container credentials |
+
+## API examples
+
+The order body is `samples/order.json` (product 1, quantity 2, total 3000 BDT). Replace the example values with IDs from earlier responses. Payment initiation takes integer `orderId` values, and callbacks take the GUID `paymentIntentId` returned by initiation.
+
+```bash
+BASE=http://localhost:8080
+
 # Health
-curl -sS http://localhost:8080/health
+curl -sS "$BASE/health"
 
-# Products
-curl -sS http://localhost:8080/api/v1/products
+# Seeded catalog
+curl -sS "$BASE/api/v1/products"
 
-# Create an order
-curl -sS -X POST http://localhost:8080/api/v1/orders \
+# Create an order (201 Created, with a Location header)
+curl -sS -i -X POST "$BASE/api/v1/orders" \
   -H 'Content-Type: application/json' \
   --data-binary @samples/order.json
 
-# Fetch an order
-curl -sS http://localhost:8080/api/v1/orders/{id}
+# Fetch an order by its integer id
+curl -sS "$BASE/api/v1/orders/1"
 
-# Initiate a payment (repeat with the same idempotencyKey to get the same intent)
-curl -sS -X POST http://localhost:8080/api/v1/payments/initiate \
+# Initiate a sandbox payment intent. Reusing the key returns the same intent.
+curl -sS -X POST "$BASE/api/v1/payments/initiate" \
   -H 'Content-Type: application/json' \
-  -d '{"orderId":"{id}","amount":42.00,"idempotencyKey":"demo-key-1"}'
+  -d '{"orderId":1,"amount":3000.00,"idempotencyKey":"demo-key-1"}'
 
-# Send a payment callback signed with the webhook secret
-BODY='{"paymentIntentId":"{paymentIntentId}","status":"succeeded"}'
-SIGNATURE=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$Payment__WebhookSecret" -hex | awk '{print $NF}')
-curl -sS -X POST http://localhost:8080/api/v1/payments/callback \
+# Send a signed callback. The signature is lowercase hex HMAC-SHA256 of the raw body.
+BODY='{"paymentIntentId":"<paymentIntentId from initiate>","status":"succeeded"}'
+SECRET=${Payment__WebhookSecret:-local-dev-secret-change-me}
+SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" -hex | awk '{print $NF}')
+curl -sS -X POST "$BASE/api/v1/payments/callback" \
   -H 'Content-Type: application/json' \
-  -H "X-Signature: $SIGNATURE" \
+  -H "X-Signature: $SIG" \
   -d "$BODY"
 
 # OpenAPI document
-curl -sS http://localhost:8080/swagger/v1/swagger.json
+curl -sS "$BASE/swagger/v1/swagger.json"
 ```
 
-The callback signature is the lowercase hex HMAC-SHA256 of the raw request body. Any whitespace change in the body changes the signature.
+The signature is computed over the exact bytes sent. Any change in whitespace or property order changes the signature.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Client[curl or Next.js storefront] --> Api[BdCommerce.Api on .NET 8]
-    Api --> Db[(PostgreSQL 16)]
-    Api --> Pay[Mock payment provider]
+    Client[curl or any HTTP client] --> Api
+    Storefront[Next.js storefront] --> Api
+    Api[BdCommerce.Api on .NET 8] --> Db[(PostgreSQL 16)]
+    Api --> Provider[Pluggable payment provider]
+    Provider --> Mock[Offline mock]
+    Provider --> Sandbox[bKash sandbox adapter]
+    Api --> Collector[OTLP collector]
+    Collector --> Jaeger[Jaeger UI]
     Api --> Docs[Swagger UI and OpenAPI]
-    Db --> Vol[(Persistent Docker volume)]
+    Db --> Volume[(Named Docker volume)]
 ```
 
-### Tracing (local only)
+The same four Compose services used for the load run and demo are `api`, `postgres`, `otel-collector`, and `jaeger`. The image can also be built on its own with `docker build -t bd-commerce-api:local .`.
 
-Tracing stays inside this Compose stack. `docker-compose.yml` runs an OpenTelemetry Collector (`otel-collector`) and Jaeger all-in-one (`jaeger`) alongside the API and PostgreSQL. `otel-collector-config.yaml` receives OTLP on gRPC 4317 / HTTP 4318 and forwards traces to the in-network Jaeger instance; Compose sets `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317` for the API. The OTLP exporter is registered only when that variable is set, so plain `dotnet run` and tests never try to reach a collector. The collector ports and the Jaeger UI on 16686 are bound to host loopback (`127.0.0.1`) only. Jaeger UI: <http://127.0.0.1:16686>. There is no hosted or cloud tracing endpoint.
+## Observability
 
-This path is verified against real Jaeger query evidence, not just configuration: `results/tracing-evidence.json` records a query of `http://127.0.0.1:16686/api/traces?service=bd-commerce-api&limit=20` from the earlier external-writer Compose run (loopback 18080 / Jaeger 16686), which returned 20 traces / 30 spans with verdict `PASS`; the raw response is `results/jaeger-traces.json`. That predates the canonical fork load run below (18081 / Jaeger 16687), whose own wire-up re-check is recorded in `results/LOAD-RESULTS.md` under "Observability wire-up confirmation". The spans include the auto-instrumented `GET /api/v1/products` and `GET /health` operations and the explicit `products.list` ActivitySource span, all under the `bd-commerce-api` service. `results/compose-state-at-run.json` records the four running local containers (api, postgres, otel-collector, jaeger) at run time.
+Compose runs an OpenTelemetry Collector and Jaeger all-in-one beside the API and PostgreSQL. The collector receives OTLP on gRPC 4317 and HTTP 4318 and forwards traces to Jaeger in the same network. The OTLP exporter registers only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, so plain `dotnet run` and the tests never try to reach a collector. The collector ports and the Jaeger UI on 16686 bind to host loopback only.
+
+Open the Jaeger UI at <http://127.0.0.1:16686>. A query against that local instance returned 20 traces whose spans include the automatic `GET /api/v1/products` and `GET /health` operations and the named `products.list` span under the `bd-commerce-api` service. The recorded evidence is in `results/tracing-evidence.json` and `results/jaeger-traces.json`, and the Compose state at run time is in `results/compose-state-at-run.json`.
 
 ## Benchmarks
 
-All load figures in this README are local-Compose results, not measurements of a public service. There is no live URL and no hosted deployment for this project; a measurement against a hosted deployment would be required before making any hosted-performance claim, and none is made here.
+All figures below are local Compose measurements, not claims about a hosted service.
 
-### Earlier ApacheBench snapshot (2026-11-25)
+Canonical scenario in `load/k6.js`: a `ramping-vus` executor (0 to 10 VUs over 10 s, hold 10 VUs for 20 s, ramp down over 5 s, 2 s graceful stop) checking `/health`, `/api/v1/products`, order create and get, and payment initiation. Run with k6 v2.4.0 (`grafana/k6:latest`) and Docker 29.9.1 against an isolated local Compose stack. Hardware: AMD Ryzen 7 6800HS, 16 logical CPUs, 14 GiB RAM, Linux x86_64. Exit code 0.
 
-Recorded against `GET /api/v1/products` on a locally composed api + PostgreSQL 16 stack with `ab -n 1000 -c 20 http://127.0.0.1:8080/api/v1/products` (ApacheBench 2.3) on AMD Ryzen 7 6800HS Creator Edition, x86_64, 16 logical CPUs. These are real observations from that local run, not estimates.
+| Metric | Observed |
+| --- | --- |
+| HTTP requests | 6502 (183.93 req/s) |
+| Error rate (`http_req_failed`) | 0.00% (0 of 6502) |
+| Checks | 6500 / 6500 passed (100%) |
+| Request duration avg / median | 1.95 ms / 1.03 ms |
+| Request duration p90 / p95 | 5.40 ms / 6.19 ms |
+| Request duration max | 211.36 ms |
+| Max virtual users | 10 |
+| Wall clock / complete iterations | 35.4 s / 1300 |
 
-| Metric | Value | Tool | Concurrency | Hardware |
-| --- | --- | --- | --- | --- |
-| Requests per second | 4969.68 | ApacheBench 2.3 (`ab -n 1000 -c 20`) | 20 | AMD Ryzen 7 6800HS, x86_64, 16 logical CPUs |
-| p50 latency (ms) | 3 | ApacheBench 2.3 | 20 | AMD Ryzen 7 6800HS, x86_64, 16 logical CPUs |
-| p95 latency (ms) | 4 | ApacheBench 2.3 | 20 | AMD Ryzen 7 6800HS, x86_64, 16 logical CPUs |
-| p99 latency (ms) | 18 | ApacheBench 2.3 | 20 | AMD Ryzen 7 6800HS, x86_64, 16 logical CPUs |
-| Error rate (%) | 0 | ApacheBench 2.3 (`Failed requests: 0`) | 20 | AMD Ryzen 7 6800HS, x86_64, 16 logical CPUs |
+Thresholds `rate<0.01` on `http_req_failed`, `p(95)<2000` ms on `http_req_duration`, and `rate>0.99` on `checks` were all satisfied. k6 v2.4.0 does not export p99. The machine-readable export is `results/k6-summary.json`, and the full write-up with the exact command is `results/LOAD-RESULTS.md`.
 
-### Local k6 load run — canonical scenario (2026-11-26)
+A separate local observation with ApacheBench (`ab -n 1000 -c 20`) against `GET /api/v1/products` recorded 4969.68 req/s with p50 3 ms, p95 4 ms, p99 18 ms, and zero failed requests on the same machine. ApacheBench and k6 use different clients and load models, so these two sets of figures are not comparable and are kept separate.
 
-`load/k6.js` is the canonical scenario: a `ramping-vus` executor (0 -> 10 VUs over 10 s, hold 10 VUs for 20 s, ramp down over 5 s, 2 s graceful stop) checking `/health`, `/api/v1/products`, order create/get and payment initiation. It ran against the isolated local Compose stack on loopback port 18081 with k6 v2.4.0 (`grafana/k6:latest`) and Docker 29.9.1. The exact command (including `docker run --user "$(id -u):$(id -g)"` so the summary could be exported) and full context are in `results/LOAD-RESULTS.md`; installation provenance is in `results/k6-provenance.json`; the Compose state at run time is in `results/compose-state-at-run.json`. Exit code 0.
+## Scope and deployment
 
-Hardware: AMD Ryzen 7 6800HS, 16 logical CPUs, 14 GiB RAM, Linux 7.2.11-1-cachyos x86_64. Wall clock 35.4 s, 1300 complete iterations.
+Deployment is reproducible from source. `docker compose up --build` starts the API, PostgreSQL, the collector, and Jaeger on loopback; `docker build -t bd-commerce-api:local .` builds the API image alone; and the `web/` app builds with `npm ci` and `npm run build`. No hosted endpoint is published for this repository, so every command and example here targets localhost.
 
-| Metric | Observed | Source |
-| --- | --- | --- |
-| HTTP requests | 6502 (183.93 req/s) | `results/k6-summary.json` |
-| Error rate (`http_req_failed`) | 0.00% (0 / 6502) | `results/k6-summary.json` |
-| Checks | 6500 / 6500 passed (100%) | `results/k6-summary.json` |
-| Request duration avg / median | 1.95 ms / 1.03 ms | `results/k6-summary.json` |
-| Request duration p95 | 6.19 ms | `results/k6-summary.json` |
-| Request duration max | 211.36 ms | `results/k6-summary.json` |
-| Max virtual users | 10 | `results/k6-summary.json` |
+The payment flow is sandbox only. The provider registry selects the offline mock unless `Payment__Provider=BkashSandbox` is set explicitly, credentials come from environment variables, and no money moves. The API has no authentication or role-based access control, so keep the stack on a trusted network and replace the development webhook secret and PostgreSQL password before adapting it beyond local use.
 
-Thresholds declared in `load/k6.js` — `http_req_failed` rate < 0.01, `http_req_duration` p(95) < 2000 ms, `checks` rate > 0.99 — were all satisfied and the run exited 0. The `thresholds` booleans in the `--summary-export` JSON are breach flags: `false` means the threshold was **not** breached, i.e. it passed. k6 v2.4.0 does not export p99, so no p99 figure is stated.
+## License and links
 
-#### Superseded external-baseline run (reference only)
-
-An earlier 5-VU / 30 s smoke script with a 1 s sleep per iteration was written concurrently by an external party; its provenance was ambiguous, so it is **superseded** by the canonical run above. It is preserved verbatim at `load/k6.external-baseline.js`, with its export at `results/k6-summary.external-baseline.json`. Its figures (reference only, not the current result): 300 requests, 0 failed; 450/450 checks; p95 4.09 ms; mean 1.42 ms; 5 VUs; 150 iterations; ~9.96 req/s.
-
-The ApacheBench and k6 figures are not comparable and must not be merged. The ~4970 rps number is a 20-concurrency `ab` throughput observation; the canonical k6 figures come from a different client, load model (ramping VUs) and endpoint mix. Neither is a measurement of a hosted deployment, and none of these results support any claim about a live or hosted service.
-
-## Limitations
-
-- Sandbox only. The mock payment provider does not contact a real processor and no money moves; the bKash/Nagad pieces are sandbox adapter scaffolding, not live payment integrations.
-- No authentication or role based access control. Every endpoint is anonymous, including `/health`, the `/api/v1/*` routes and the Swagger UI, so do not expose this service to untrusted networks.
-- No live URL and no hosted deployment by design. The GitHub repository at <https://github.com/ibraramin/bd-commerce-api> is the canonical home; run the stack locally with `docker compose up --build`. All API examples in this README were executed against that local stack.
-
-## License
-
-MIT. See `LICENSE`. Copyright 2026 Ibrar Amin.
+- License: MIT. Copyright (c) 2026 Ibrar Amin. See `LICENSE`.
+- Repository: <https://github.com/ibraramin/bd-commerce-api>
+- CI workflow: <https://github.com/ibraramin/bd-commerce-api/actions/workflows/ci.yml>
+- Load results: `results/LOAD-RESULTS.md`
+- Load scenario: `load/k6.js`
+- Storefront: `web/`
+- Golden OpenAPI contract: `tests/BdCommerce.Api.Tests/Golden/openapi-v1.json`
