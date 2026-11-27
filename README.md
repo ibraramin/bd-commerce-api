@@ -10,7 +10,7 @@ A runnable commerce backend and storefront for developers who want a complete, l
 
 [![Launch video](docs/assets/brag.jpg)](docs/assets/brag.mp4)
 
-https://github.com/ibraramin/bd-commerce-api/raw/main/docs/assets/brag.mp4
+https://github.com/user-attachments/assets/91ad4269-52fe-4596-8d0f-d9bfc19d059c
 
 
 ## Key capabilities
