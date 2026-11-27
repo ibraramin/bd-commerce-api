@@ -4,7 +4,6 @@ A runnable commerce backend and storefront for developers who want a complete, l
 
 [![CI](https://github.com/ibraramin/bd-commerce-api/actions/workflows/ci.yml/badge.svg)](https://github.com/ibraramin/bd-commerce-api/actions/workflows/ci.yml) ![.NET 8](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql) ![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs) ![MIT](https://img.shields.io/badge/license-MIT-green)
 
-[![BD Commerce API launch video](https://github.com/ibraramin/bd-commerce-api/releases/download/v0.1.0/brag.jpg)](https://github.com/ibraramin/bd-commerce-api/releases/download/v0.1.0/brag.mp4)
 
 ![Project showcase](https://github.com/ibraramin/bd-commerce-api/releases/download/v0.1.0/showcase.gif)
 
