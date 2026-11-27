@@ -1,3 +1,4 @@
+using BdCommerce.Api;
 using BdCommerce.Api.Data;
 using BdCommerce.Api.Endpoints;
 using BdCommerce.Api.Providers;
@@ -6,6 +7,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +23,24 @@ builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddPaymentProviders(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
+
+// Local-only tracing. Automatic ASP.NET Core request spans are complemented by
+// named spans from BdCommerceTelemetry.Source. OTLP export is enabled only when an
+// endpoint is configured (docker-compose points it at the local collector), so
+// tests and plain CLI runs never attempt to reach a collector.
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddSource(BdCommerceTelemetry.SourceName)
+            .AddAspNetCoreInstrumentation();
+
+        if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+        {
+            tracing.AddOtlpExporter();
+        }
+    });
+
 builder.Services.AddSwaggerGen(options =>
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "BdCommerce.Api", Version = "v1" }));
 

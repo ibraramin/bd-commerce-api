@@ -1,0 +1,150 @@
+{
+    "metrics": {
+        "iterations": {
+            "count": 150,
+            "rate": 4.9799478994862785
+        },
+        "checks": {
+            "passes": 450,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.99": false
+            },
+            "value": 1
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 300,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "http_req_receiving": {
+            "max": 0.690146,
+            "p(90)": 0.0775479000000001,
+            "p(95)": 0.10596670000000002,
+            "avg": 0.04956331333333335,
+            "min": 0.011623,
+            "med": 0.0349115
+        },
+        "vus": {
+            "min": 5,
+            "max": 5,
+            "value": 5
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 1.4187274300000001,
+            "min": 0.148554,
+            "med": 0.8800589999999999,
+            "max": 23.580233,
+            "p(90)": 2.225913200000003,
+            "p(95)": 4.08783975
+        },
+        "http_req_sending": {
+            "p(95)": 0.042681800000000096,
+            "avg": 0.017333096666666683,
+            "min": 0.003547,
+            "med": 0.0101695,
+            "max": 0.357322,
+            "p(90)": 0.026462100000000002
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "data_sent": {
+            "count": 24450,
+            "rate": 811.7315076162635
+        },
+        "http_req_waiting": {
+            "max": 23.495772,
+            "p(90)": 2.151341300000004,
+            "p(95)": 4.004112050000001,
+            "avg": 1.35183102,
+            "min": 0.126341,
+            "med": 0.8430335
+        },
+        "http_reqs": {
+            "count": 300,
+            "rate": 9.959895798972557
+        },
+        "vus_max": {
+            "value": 5,
+            "min": 5,
+            "max": 5
+        },
+        "data_received": {
+            "count": 119850,
+            "rate": 3978.9783716895367
+        },
+        "http_req_connecting": {
+            "max": 0.156098,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.0020898266666666667,
+            "min": 0,
+            "med": 0
+        },
+        "iteration_duration": {
+            "avg": 1003.8617670599998,
+            "min": 1001.028543,
+            "med": 1002.528022,
+            "max": 1027.801817,
+            "p(90)": 1006.9881482999999,
+            "p(95)": 1010.3438755999999
+        },
+        "http_req_duration": {
+            "avg": 1.4187274300000001,
+            "min": 0.148554,
+            "med": 0.8800589999999999,
+            "max": 23.580233,
+            "p(90)": 2.225913200000003,
+            "p(95)": 4.08783975,
+            "thresholds": {
+                "p(95)<2000": false
+            }
+        },
+        "http_req_blocked": {
+            "med": 0.0037219999999999996,
+            "max": 0.228826,
+            "p(90)": 0.0074859,
+            "p(95)": 0.010320550000000003,
+            "avg": 0.007489716666666663,
+            "min": 0.001212
+        }
+    },
+    "root_group": {
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+            "health returns 200": {
+                "name": "health returns 200",
+                "path": "::health returns 200",
+                "id": "e541dcf719b124ee8f73cfb91a5bbf45",
+                "passes": 150,
+                "fails": 0
+            },
+            "products returns 200": {
+                "name": "products returns 200",
+                "path": "::products returns 200",
+                "id": "0eb8a579ce7c85aeaa42034ccfbb1046",
+                "passes": 150,
+                "fails": 0
+            },
+            "products returns a JSON array": {
+                "name": "products returns a JSON array",
+                "path": "::products returns a JSON array",
+                "id": "39db4c02e5af4ca30419ecf21efbd664",
+                "passes": 150,
+                "fails": 0
+            }
+        },
+        "name": "",
+        "path": ""
+    }
+}

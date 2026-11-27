@@ -23,4 +23,8 @@
     <ProjectReference Include="../../src/BdCommerce.Api/BdCommerce.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Golden/openapi-v1.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,43 @@
+{
+  "recorded_utc": "2026-11-26T05:25:05Z",
+  "tool": "k6",
+  "version": "k6 v2.4.0 (commit/dd9395906d, go1.26.11, linux/amd64)",
+  "install_provenance": {
+    "command_v_k6": "command -v k6 -> exit 1 (not on PATH)",
+    "latest_release_query": "curl -sS -m 10 https://api.github.com/repos/grafana/k6/releases/latest -> tag v2.4.0",
+    "failed_attempt": "timeout 25 curl -fsSL -o /var/tmp/opencode/k6.zip https://github.com/grafana/k6/releases/download/v2.4.0/k6-v2.4.0-linux-amd64.zip -> exit 22 (HTTP 404)",
+    "successful_attempt": "timeout 25 curl -fsSL -o /var/tmp/opencode/k6.tar.gz https://github.com/grafana/k6/releases/download/v2.4.0/k6-v2.4.0-linux-amd64.tar.gz -> exit 0; tar -xzf into /var/tmp/opencode/k6-bin",
+    "binary_path": "/var/tmp/opencode/k6-bin/k6-v2.4.0-linux-amd64/k6"
+  },
+  "run": {
+    "start_utc": "2026-11-26T05:23:55Z",
+    "end_utc": "2026-11-26T05:24:26Z",
+    "base_url": "http://127.0.0.1:18080",
+    "command": "BASE_URL=http://127.0.0.1:18080 /var/tmp/opencode/k6-bin/k6-v2.4.0-linux-amd64/k6 run load/k6.js --summary-export=results/k6-summary.json",
+    "exit_code": 0,
+    "script": "load/k6.js",
+    "options": {
+      "vus": 5,
+      "duration": "30s"
+    },
+    "thresholds": {
+      "http_req_failed": "rate<0.01",
+      "http_req_duration": "p(95)<2000",
+      "checks": "rate>0.99"
+    },
+    "compose_state_file": "results/compose-state-at-run.json",
+    "console_log": "results/k6-run.log",
+    "summary_file": "results/k6-summary.json"
+  },
+  "real_metrics": {
+    "http_reqs": 300,
+    "http_req_failed_rate": 0,
+    "http_req_duration_avg_ms": 1.4187274300000001,
+    "http_req_duration_p95_ms": 4.08783975,
+    "checks_total": 450,
+    "checks_passed": 450,
+    "iterations": 150,
+    "vus_max": 5
+  },
+  "comparability_note": "These are VU-based k6 figures (5 VUs / 30s). They are NOT comparable to prior ab requests-per-second numbers (~4970 rps): different load model, concurrency and client. Do not conflate them."
+}

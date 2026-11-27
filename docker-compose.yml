@@ -12,9 +12,14 @@ services:
       Payment__Provider: "${Payment__Provider:-Mock}"
       # Development fallback only. Set a real secret in deployed environments.
       Payment__WebhookSecret: "${Payment__WebhookSecret:-local-dev-secret-change-me}"
+      # Local-only tracing: OTLP goes to the in-network collector, never a hosted endpoint.
+      OTEL_SERVICE_NAME: "bd-commerce-api"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
     depends_on:
       postgres:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:8080/health"]
       interval: 30s
@@ -37,6 +42,28 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    restart: unless-stopped
+
+  # Local-only collector: receives OTLP from the API and forwards to the local Jaeger.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "127.0.0.1:${OTEL_GRPC_PORT:-4317}:4317" # OTLP/gRPC (host loopback only)
+      - "127.0.0.1:${OTEL_HTTP_PORT:-4318}:4318" # OTLP/HTTP (host loopback only)
+    depends_on:
+      jaeger:
+        condition: service_started
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "127.0.0.1:${JAEGER_UI_PORT:-16686}:16686" # Jaeger UI/query API, host loopback only
     restart: unless-stopped
 
 volumes:

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using BdCommerce.Api.Contracts;
 using BdCommerce.Api.Data;
 using BdCommerce.Api.Domain;
@@ -17,6 +18,7 @@ public static class OrderEndpoints
                 AppDbContext db,
                 CancellationToken ct) =>
             {
+                using var activity = BdCommerceTelemetry.Source.StartActivity("orders.create", ActivityKind.Server);
                 var validation = await validator.ValidateAsync(request, ct);
                 if (!validation.IsValid)
                 {
@@ -57,9 +59,11 @@ public static class OrderEndpoints
                     }).ToList()
                 };
                 order.Total = order.Items.Sum(i => i.Quantity * i.UnitPrice);
+                activity?.SetTag("order.total", (double)order.Total);
 
                 db.Orders.Add(order);
                 await db.SaveChangesAsync(ct);
+                activity?.SetTag("order.id", order.Id);
 
                 return Results.Created($"/api/v1/orders/{order.Id}", ToResponse(order));
             })

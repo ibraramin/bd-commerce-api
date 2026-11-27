@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -25,6 +26,7 @@ public static class PaymentEndpoints
                 IConfiguration configuration,
                 CancellationToken ct) =>
             {
+                using var activity = BdCommerceTelemetry.Source.StartActivity("payments.initiate", ActivityKind.Server);
                 var validation = await validator.ValidateAsync(request, ct);
                 if (!validation.IsValid)
                 {
@@ -67,6 +69,7 @@ public static class PaymentEndpoints
                 var initiation = await provider.InitiateAsync(intent, ct);
                 intent.CheckoutUrl = initiation.CheckoutUrl;
                 intent.ProviderReference = initiation.ProviderReference;
+                activity?.SetTag("payment.provider", intent.Provider);
 
                 db.PaymentIntents.Add(intent);
                 await db.SaveChangesAsync(ct);

@@ -1,0 +1,28 @@
+# Local-only OpenTelemetry Collector config.
+# OTLP in from the API, OTLP out to the in-network Jaeger all-in-one instance.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+
+exporters:
+  otlp_grpc/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp_grpc/jaeger]
+  telemetry:
+    logs:
+      level: info
